@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bézier Rope</title>
+<style>
+body{margin:0;overflow:hidden;background:#111}
+canvas{display:block}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<script>
+const c=document.getElementById("c"),x=c.getContext("2d");
+function r(){c.width=innerWidth;c.height=innerHeight}
+addEventListener("resize",r);r();
+
+const v=(x,y)=>({x,y}),
+a=(p,q)=>v(p.x+q.x,p.y+q.y),
+s=(p,q)=>v(p.x-q.x,p.y-q.y),
+m=(p,k)=>v(p.x*k,p.y*k),
+l=p=>Math.hypot(p.x,p.y),
+n=p=>{let d=l(p);return d?v(p.x/d,p.y/d):v(0,0)}
+
+const P0=v(100,c.height/2),P3=v(c.width-100,c.height/2)
+const P1={p:v(300,c.height/2-120),v:v(0,0),t:v(300,c.height/2-120)}
+const P2={p:v(c.width-300,c.height/2+120),v:v(0,0),t:v(c.width-300,c.height/2+120)}
+
+const k=20,d=5,dt=1/60
+let mouse=v(c.width/2,c.height/2)
+
+c.onmousemove=e=>{
+  mouse=v(e.clientX,e.clientY)
+  P1.t=a(P1.p,m(s(mouse,P1.p),0.2))
+  P2.t=a(P2.p,m(s(mouse,P2.p),0.2))
+}
+
+function B(t){
+  let u=1-t
+  return a(
+    a(m(P0,u*u*u),m(P1.p,3*u*u*t)),
+    a(m(P2.p,3*u*t*t),m(P3,t*t*t))
+  )
+}
+
+function T(t){
+  let u=1-t
+  return n(a(
+    a(m(s(P1.p,P0),3*u*u),m(s(P2.p,P1.p),6*u*t)),
+    m(s(P3,P2.p),3*t*t)
+  ))
+}
+
+function update(p){
+  let f=s(p.t,p.p)
+  let a0=s(m(f,k),m(p.v,d))
+  p.v=a(p.v,m(a0,dt))
+  p.p=a(p.p,m(p.v,dt))
+}
+
+function draw(){
+  x.clearRect(0,0,c.width,c.height)
+
+  x.beginPath()
+  for(let t=0;t<=1;t+=0.01){
+    let p=B(t)
+    t?x.lineTo(p.x,p.y):x.moveTo(p.x,p.y)
+  }
+  x.strokeStyle="#00ffcc";x.lineWidth=3;x.stroke()
+
+  x.strokeStyle="#ff5555"
+  for(let t=0;t<=1;t+=0.1){
+    let p=B(t),q=a(p,m(T(t),30))
+    x.beginPath();x.moveTo(p.x,p.y);x.lineTo(q.x,q.y);x.stroke()
+  }
+
+  ;[P0,P1.p,P2.p,P3].forEach((p,i)=>{
+    x.beginPath()
+    x.arc(p.x,p.y,6,0,Math.PI*2)
+    x.fillStyle=i==1||i==2?"#ffaa00":"#fff"
+    x.fill()
+  })
+}
+
+function loop(){
+  update(P1);update(P2);draw()
+  requestAnimationFrame(loop)
+}
+loop()
+</script>
+
+</body>
+</html>
